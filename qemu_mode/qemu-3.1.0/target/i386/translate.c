@@ -7200,6 +7200,9 @@ static target_ulong disas_insn(DisasContext *s, CPUState *cpu)
             gen_eob(s);
         }
         break;
+    case 0x124: /* pseudo-instr: 0x0f 0x24 - AFL call */
+        gen_helper_aflCall(cpu_regs[R_EAX], cpu_env, cpu_regs[R_EDI], cpu_regs[R_ESI], cpu_regs[R_EDX]);
+        break;
 #ifdef TARGET_X86_64
     case 0x105: /* syscall */
         /* XXX: is it usable in real mode ? */

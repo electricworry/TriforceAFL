@@ -755,6 +755,18 @@ void tcg_register_thread(void)
     g_assert(!err);
     qemu_mutex_unlock(&region.lock);
 }
+
+void tcg_unregister_thread(void)
+{
+    int n = atomic_fetch_dec(&n_tcg_ctxs);
+    n--;
+    TCGContext *s = atomic_xchg(&tcg_ctxs[n], NULL);
+    g_free(s);
+    
+    qemu_mutex_lock(&region.lock);
+    region.current = 0;
+    qemu_mutex_unlock(&region.lock);
+}
 #endif /* !CONFIG_USER_ONLY */
 
 /*

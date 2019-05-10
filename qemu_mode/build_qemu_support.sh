@@ -137,9 +137,10 @@ cd qemu-$VERSION || exit 1
 # --enable-pie seems to give a couple of exec's a second performance
 # improvement, much to my surprise. Not sure how universal this is..
 
-CFLAGS="-O3 -ggdb" ./configure --disable-system \
+CFLAGS="-O3 -ggdb" ./configure --disable-werror \
+  --enable-system \
   --enable-linux-user --disable-gtk --disable-sdl --disable-vnc \
-  --target-list="${CPU_TARGET}-linux-user" --enable-pie --enable-kvm || exit 1
+  --target-list="${CPU_TARGET}-linux-user ${CPU_TARGET}-softmmu" --enable-pie --enable-kvm || exit 1
 
 echo "[+] Configuration complete."
 
@@ -152,6 +153,7 @@ echo "[+] Build process successful!"
 echo "[*] Copying binary..."
 
 cp -f "${CPU_TARGET}-linux-user/qemu-${CPU_TARGET}" "../../afl-qemu-trace" || exit 1
+cp -f "${CPU_TARGET}-softmmu/qemu-system-${CPU_TARGET}" "../../afl-qemu-system-trace" || exit 1
 
 cd ..
 ls -l ../afl-qemu-trace || exit 1

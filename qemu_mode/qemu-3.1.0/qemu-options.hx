@@ -2980,6 +2980,13 @@ STEXI
 @table @option
 ETEXI
 
+DEF("aflFile", HAS_ARG, QEMU_OPTION_aflFile, \
+    "-aflFile fname  AFL input sourced from fname\n", QEMU_ARCH_ALL)
+DEF("aflPanicAddr", HAS_ARG, QEMU_OPTION_aflPanicAddr, \
+    "-aflPanicAddr hexaddr  Address of OS panic function\n", QEMU_ARCH_ALL)
+DEF("aflDmesgAddr", HAS_ARG, QEMU_OPTION_aflDmesgAddr, \
+    "-aflDmesgAddr hexaddr  Address of OS logging function\n", QEMU_ARCH_ALL)
+
 DEF("fw_cfg", HAS_ARG, QEMU_OPTION_fwcfg,
     "-fw_cfg [name=]<name>,file=<file>\n"
     "                add named fw_cfg entry with contents from file\n"

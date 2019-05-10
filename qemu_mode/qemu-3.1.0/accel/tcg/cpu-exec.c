@@ -138,15 +138,14 @@ static void init_delay_params(SyncClocks *sc, const CPUState *cpu)
 #endif /* CONFIG USER ONLY */
 
 /* Execute a TB, and fix up the CPU state afterwards if necessary */
-static inline tcg_target_ulong cpu_tb_exec(CPUState *cpu, TranslationBlock *itb)
+static inline tcg_target_ulong cpu_tb_exec(target_ulong pc, CPUState *cpu, TranslationBlock *itb)
 {
     CPUArchState *env = cpu->env_ptr;
     uintptr_t ret;
     TranslationBlock *last_tb;
     int tb_exit;
     uint8_t *tb_ptr = itb->tc.ptr;
-
-    AFL_QEMU_CPU_SNIPPET2;
+AFL_QEMU_CPU_SNIPPET2(env, pc);
 
     qemu_log_mask_and_addr(CPU_LOG_EXEC, itb->pc,
                            "Trace %d: %p ["
@@ -195,7 +194,14 @@ static inline tcg_target_ulong cpu_tb_exec(CPUState *cpu, TranslationBlock *itb)
             assert(cc->set_pc);
             cc->set_pc(cpu, last_tb->pc);
         }
+    } else {
+        /* we executed it, trace it */
+        //AFL_QEMU_CPU_SNIPPET2(env, pc);
     }
+
+    if(afl_wants_cpu_to_stop)
+        cpu->exit_request = 1;
+
     return ret;
 }
 
@@ -224,7 +230,7 @@ static void cpu_exec_nocache(CPUState *cpu, int max_cycles,
 
     /* execute the generated code */
     trace_exec_tb_nocache(tb, tb->pc);
-    cpu_tb_exec(cpu, tb);
+    cpu_tb_exec(tb->pc, cpu, tb);
 
     mmap_lock();
     tb_phys_invalidate(tb, -1);
@@ -260,7 +266,7 @@ void cpu_exec_step_atomic(CPUState *cpu)
         cc->cpu_exec_enter(cpu);
         /* execute the generated code */
         trace_exec_tb(tb, pc);
-        cpu_tb_exec(cpu, tb);
+        cpu_tb_exec(tb->pc, cpu, tb);
         cc->cpu_exec_exit(cpu);
     } else {
         /*
@@ -420,10 +426,15 @@ static inline TranslationBlock *tb_find(CPUState *cpu,
         last_tb = NULL;
     }
 #endif
+/*
+ * chaining complicates AFL's instrumentation so we disable it
+ */
+//#ifdef NOPE_NOT_EVER
     /* See if we can patch the calling TB. */
     if (last_tb) {
         tb_add_jump(last_tb, tb_exit, tb);
     }
+//#endif
     return tb;
 }
 
@@ -617,7 +628,7 @@ static inline void cpu_loop_exec_tb(CPUState *cpu, TranslationBlock *tb,
     int32_t insns_left;
 
     trace_exec_tb(tb, tb->pc);
-    ret = cpu_tb_exec(cpu, tb);
+    ret = cpu_tb_exec(tb->pc, cpu, tb);
     tb = (TranslationBlock *)(ret & ~TB_EXIT_MASK);
     *tb_exit = ret & TB_EXIT_MASK;
     if (*tb_exit != TB_EXIT_REQUESTED) {

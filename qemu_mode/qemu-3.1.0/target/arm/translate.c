@@ -76,6 +76,8 @@ static const char * const regnames[] =
     { "r0", "r1", "r2", "r3", "r4", "r5", "r6", "r7",
       "r8", "r9", "r10", "r11", "r12", "r13", "r14", "pc" };
 
+static void gen_aflBBlock(traget_ulong pc);
+
 /* Function prototypes for gen_ functions calling Neon helpers.  */
 typedef void NeonGenThreeOpEnvFn(TCGv_i32, TCGv_env, TCGv_i32,
                                  TCGv_i32, TCGv_i32);
@@ -10498,9 +10500,20 @@ static void disas_arm_insn(DisasContext *s, unsigned int insn)
             break;
         case 0xf:
             /* swi */
-            gen_set_pc_im(s, s->pc);
-            s->svc_imm = extract32(insn, 0, 24);
-            s->base.is_jmp = DISAS_SWI;
+            target_ulong svc_imm = extract32(insn, 0, 24);
+            if(svc_imm == 0x4c4641) {
+                tmp = load_reg(s, 0);
+                tmp2 = load_reg(s, 1);
+                tmp3 = load_reg(s, 2);
+                gen_helper_aflCall(tmp, cpu_env, tmp, tmp2, tmp3);
+                tcg_temp_free_i32(tmp3);
+                tcg_temp_free_i32(tmp2);
+                store_reg(s, 0, tmp);
+            } else {
+                gen_set_pc_im(s, s->pc);
+                s->svc_imm = svc_imm;
+                s->is_jmp = DISAS_SWI;
+            }
             break;
         default:
         illegal_op:
